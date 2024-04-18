@@ -32,8 +32,10 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Twist3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.kinematics.SwerveDriveWheelPositions;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.*;
@@ -330,5 +332,21 @@ public class SwerveDrive {
 
     public double getCurrentDraw() {
         return totalCurrentDraw;
+    }
+
+    SwerveDriveWheelPositions lastPositions = new SwerveDriveWheelPositions(getModulePositions());
+
+    public Twist3d getTwist() {
+
+        var now = new SwerveDriveWheelPositions(getModulePositions());
+        var twist = kinematics.toTwist2d(lastPositions, now);
+        lastPositions = now;
+        
+        var twist3 = new Twist3d(
+            twist.dx, twist.dy, 0,
+            0, 0, twist.dtheta
+        );
+
+        return twist3;
     }
 }

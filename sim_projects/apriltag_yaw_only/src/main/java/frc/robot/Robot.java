@@ -29,14 +29,21 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Twist3d;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.PubSub;
+import edu.wpi.first.networktables.PubSubOption;
+import edu.wpi.first.networktables.StructArrayPublisher;
+import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
 import frc.robot.subsystems.drivetrain.SwerveDrive;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class Robot extends TimedRobot {
@@ -154,6 +161,19 @@ public class Robot extends TimedRobot {
         drivetrain.drive(forward, strafe, turn, true);
     }
 
+    StructArrayPublisher<TagDetection> tagPub;
+    StructPublisher<Twist3d> odomPub;
+
+    @Override
+    public void simulationInit() {
+        tagPub = NetworkTableInstance.getDefault()
+                .getStructArrayTopic("/cam/tags", TagDetection.struct)
+                .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+        odomPub = NetworkTableInstance.getDefault()
+                .getStructTopic("/robot/odom", Twist3d.struct)
+                .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+    }
+
     @Override
     public void simulationPeriodic() {
         // Update drivetrain simulation
@@ -169,5 +189,14 @@ public class Robot extends TimedRobot {
         // Calculate battery voltage sag due to current draw
         RoboRioSim.setVInVoltage(
                 BatterySim.calculateDefaultBatteryLoadedVoltage(drivetrain.getCurrentDraw()));
+
+        odomPub.set(drivetrain.getTwist());
+        List<TagDetection> dets = new ArrayList<>();
+        for (var result : vision.getLatestResult().getTargets()) {
+            dets.add(
+                    new TagDetection(result.getFiducialId(),
+                            result.getDetectedCorners()));
+        }
+        tagPub.set(dets.toArray(new TagDetection[0]));
     }
 }
