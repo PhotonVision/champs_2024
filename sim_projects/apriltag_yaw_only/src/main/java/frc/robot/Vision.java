@@ -26,7 +26,9 @@ package frc.robot;
 
 import static frc.robot.Constants.Vision.*;
 
+import edu.wpi.first.math.MatBuilder;
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -62,7 +64,12 @@ public class Vision {
             visionSim.addAprilTags(kTagLayout);
             // Create simulated camera properties. These can be set to mimic your actual camera.
             var cameraProp = new SimCameraProperties();
-            cameraProp.setCalibration(960, 720, Rotation2d.fromDegrees(90));
+            
+
+            var camIntrinsics = MatBuilder.fill(Nat.N3(), Nat.N3(), 1000, 0, 960/2, 0, 1000, 720/2, 0, 0, 1);
+            var distCoeff = VecBuilder.fill(0, 0, 0, 0, 0);
+            cameraProp.setCalibration(960, 720, camIntrinsics, distCoeff);
+            // cameraProp.setCalibration(960, 720, Rotation2d.fromDegrees(90));
             cameraProp.setCalibError(0.35, 0.10);
             cameraProp.setFPS(15);
             cameraProp.setAvgLatencyMs(50);

@@ -28,7 +28,11 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Twist3d;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSub;
@@ -42,9 +46,14 @@ import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
 import frc.robot.subsystems.drivetrain.SwerveDrive;
 
+import static frc.robot.Constants.Vision.kRobotToCam;
+import static frc.robot.Constants.Vision.kTagLayout;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+
+import org.photonvision.targeting.PhotonPipelineResult;
 
 public class Robot extends TimedRobot {
     private SwerveDrive drivetrain;
@@ -163,6 +172,7 @@ public class Robot extends TimedRobot {
 
     StructArrayPublisher<TagDetection> tagPub;
     StructPublisher<Twist3d> odomPub;
+    PhotonPipelineResult lastResult = new PhotonPipelineResult();
 
     @Override
     public void simulationInit() {
@@ -190,13 +200,23 @@ public class Robot extends TimedRobot {
         RoboRioSim.setVInVoltage(
                 BatterySim.calculateDefaultBatteryLoadedVoltage(drivetrain.getCurrentDraw()));
 
+
+        // Send twist to gtsam
         odomPub.set(drivetrain.getTwist());
-        List<TagDetection> dets = new ArrayList<>();
-        for (var result : vision.getLatestResult().getTargets()) {
-            dets.add(
-                    new TagDetection(result.getFiducialId(),
-                            result.getDetectedCorners()));
+        
+        // send tags to gtsam
+        var results = vision.getLatestResult();
+        if (results.getTimestampSeconds() != lastResult.getTimestampSeconds()) {
+            lastResult = results;
+            List<TagDetection> dets = new ArrayList<>();
+            for (var result : results.getTargets()) {
+                dets.add(
+                        new TagDetection(result.getFiducialId(),
+                                result.getDetectedCorners()));
+            }
+            tagPub.set(dets.toArray(new TagDetection[0]));
         }
-        tagPub.set(dets.toArray(new TagDetection[0]));
+
+        NetworkTableInstance.getDefault().flush();
     }
 }
