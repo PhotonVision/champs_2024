@@ -30,6 +30,7 @@ import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Twist3d;
@@ -336,6 +337,9 @@ public class SwerveDrive {
 
     SwerveDriveWheelPositions lastPositions = new SwerveDriveWheelPositions(getModulePositions());
 
+    /**
+     * So gtsam actually wants pose deltas
+     */
     public Twist3d getTwist() {
 
         var now = new SwerveDriveWheelPositions(getModulePositions());
@@ -347,6 +351,13 @@ public class SwerveDrive {
             0, 0, twist.dtheta
         );
 
-        return twist3;
+        var poseDelta = new Pose3d().exp(twist3);
+
+        return new Twist3d(
+            poseDelta.getX(), poseDelta.getY(), poseDelta.getZ(),
+            poseDelta.getRotation().getX(),
+            poseDelta.getRotation().getY(),
+            poseDelta.getRotation().getZ()
+        );
     }
 }
