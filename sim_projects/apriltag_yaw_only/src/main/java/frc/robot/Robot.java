@@ -39,6 +39,7 @@ import edu.wpi.first.networktables.PubSub;
 import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.networktables.StructPublisher;
+import edu.wpi.first.util.WPIUtilJNI;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
@@ -56,6 +57,7 @@ import java.util.Random;
 import org.photonvision.targeting.PhotonPipelineResult;
 
 public class Robot extends TimedRobot {
+    public static final double PERIOD = 0.01;
     private SwerveDrive drivetrain;
     private Vision vision;
 
@@ -72,6 +74,10 @@ public class Robot extends TimedRobot {
 
     // simple PID controller to aim at the target
     private PIDController aimController = new PIDController(0.02, 0, 0);
+
+    public Robot() {
+        super(PERIOD);
+    }
 
     @Override
     public void robotInit() {
@@ -186,6 +192,8 @@ public class Robot extends TimedRobot {
 
     @Override
     public void simulationPeriodic() {
+        var loopStart = WPIUtilJNI.now();
+
         // Update drivetrain simulation
         drivetrain.simulationPeriodic();
 
@@ -202,7 +210,7 @@ public class Robot extends TimedRobot {
 
 
         // Send twist to gtsam
-        odomPub.set(drivetrain.getTwist());
+        odomPub.set(drivetrain.getTwist(), loopStart);
         
         // send tags to gtsam
         var results = vision.getLatestResult();
@@ -214,7 +222,11 @@ public class Robot extends TimedRobot {
                         new TagDetection(result.getFiducialId(),
                                 result.getDetectedCorners()));
             }
-            tagPub.set(dets.toArray(new TagDetection[0]));
+            // subtract one uS to hack around gtsam stupidity with upper_bound
+            tagPub.set(dets.toArray(new TagDetection[0]), loopStart - 1);
+        } else {
+            // duplicate, drop it
+            System.out.println("Duplicate");
         }
 
         NetworkTableInstance.getDefault().flush();

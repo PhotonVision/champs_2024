@@ -300,7 +300,7 @@ public class SwerveDrive {
         swerveDriveSim.setSteerInputs(steerInputs);
 
         // Simulate one timestep
-        swerveDriveSim.update(Robot.kDefaultPeriod);
+        swerveDriveSim.update(Robot.PERIOD);
 
         // Update module and gyro values with simulated values
         var driveStates = swerveDriveSim.getDriveStates();
