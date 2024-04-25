@@ -223,10 +223,10 @@ public class Robot extends TimedRobot {
                                 result.getDetectedCorners()));
             }
             // subtract one uS to hack around gtsam stupidity with upper_bound
-            tagPub.set(dets.toArray(new TagDetection[0]), loopStart - 1);
+            tagPub.set(dets.toArray(new TagDetection[0]), loopStart - 40000);
         } else {
             // duplicate, drop it
-            System.out.println("Duplicate");
+            // System.out.println("Duplicate");
         }
 
         NetworkTableInstance.getDefault().flush();
