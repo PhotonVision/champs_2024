@@ -178,6 +178,7 @@ public class Robot extends TimedRobot {
 
     StructArrayPublisher<TagDetection> tagPub;
     StructPublisher<Twist3d> odomPub;
+    StructPublisher<Pose3d> guessPub;
     PhotonPipelineResult lastResult = new PhotonPipelineResult();
 
     @Override
@@ -187,6 +188,9 @@ public class Robot extends TimedRobot {
                 .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
         odomPub = NetworkTableInstance.getDefault()
                 .getStructTopic("/robot/odom", Twist3d.struct)
+                .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+        guessPub = NetworkTableInstance.getDefault()
+                .getStructTopic("/robot/multi_tag_pose", Pose3d.struct)
                 .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
     }
 
@@ -224,6 +228,13 @@ public class Robot extends TimedRobot {
             }
             // subtract one uS to hack around gtsam stupidity with upper_bound
             tagPub.set(dets.toArray(new TagDetection[0]), loopStart - 40000);
+
+            if (results.getMultiTagResult().estimatedPose.isPresent && results.targets.size() >= 1) {
+                var pose = new Pose3d().transformBy(results.getMultiTagResult().estimatedPose.best);
+                // flatten to floor
+                pose = new Pose3d(pose.toPose2d());
+                guessPub.set(pose, loopStart);
+            }
         } else {
             // duplicate, drop it
             // System.out.println("Duplicate");
