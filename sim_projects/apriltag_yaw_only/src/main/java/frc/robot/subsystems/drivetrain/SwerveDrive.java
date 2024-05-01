@@ -351,13 +351,6 @@ public class SwerveDrive {
             0, 0, twist.dtheta
         );
 
-        var poseDelta = new Pose3d().exp(twist3);
-
-        return new Twist3d(
-            poseDelta.getX(), poseDelta.getY(), poseDelta.getZ(),
-            poseDelta.getRotation().getX(),
-            poseDelta.getRotation().getY(),
-            poseDelta.getRotation().getZ()
-        );
+        return twist3;
     }
 }

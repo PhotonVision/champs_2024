@@ -45,6 +45,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.subsystems.drivetrain.SwerveDrive;
 
 import static frc.robot.Constants.Vision.kRobotToCam;
@@ -75,6 +76,10 @@ public class Robot extends TimedRobot {
     // simple PID controller to aim at the target
     private PIDController aimController = new PIDController(0.02, 0, 0);
 
+    GtsamInterface gtsamInterface = new GtsamInterface();
+
+    private PhotonPipelineResult lastResult = new PhotonPipelineResult();
+
     public Robot() {
         super(PERIOD);
     }
@@ -89,10 +94,43 @@ public class Robot extends TimedRobot {
 
     @Override
     public void robotPeriodic() {
+        var loopStart = WPIUtilJNI.now();
+
         drivetrain.periodic();
 
         // Log values to the dashboard
         drivetrain.log();
+
+        // send updates to gtsam
+
+        Pose3d guess = null;
+        List<TagDetection> dets = new ArrayList<>();
+        long tagDetTime = 0;
+
+        var results = vision.getLatestResult();
+        if (results.getTimestampSeconds() != lastResult.getTimestampSeconds()) {
+            lastResult = results;
+            for (var result : results.getTargets()) {
+                dets.add(
+                        new TagDetection(result.getFiducialId(),
+                                result.getDetectedCorners()));
+            }
+            
+            // Totally bogus extra latency
+            tagDetTime = loopStart - 10000;
+
+            if (results.getMultiTagResult().estimatedPose.isPresent && results.targets.size() >= 1) {
+                var pose = new Pose3d().transformBy(results.getMultiTagResult().estimatedPose.best);
+                // assume robot is sitting on the floor to better constraint guess
+                guess = new Pose3d(pose.toPose2d());
+            }
+        } else {
+            // duplicate, drop it
+            // System.out.println("Duplicate");
+        }
+
+        gtsamInterface.setCamIntrinsics(vision.getCamIntrinsics());
+        gtsamInterface.sendUpdate(loopStart, tagDetTime, dets, drivetrain.getTwist(), guess, kRobotToCam);
     }
 
     @Override
@@ -176,28 +214,8 @@ public class Robot extends TimedRobot {
         drivetrain.drive(forward, strafe, turn, true);
     }
 
-    StructArrayPublisher<TagDetection> tagPub;
-    StructPublisher<Twist3d> odomPub;
-    StructPublisher<Pose3d> guessPub;
-    PhotonPipelineResult lastResult = new PhotonPipelineResult();
-
-    @Override
-    public void simulationInit() {
-        tagPub = NetworkTableInstance.getDefault()
-                .getStructArrayTopic("/cam/tags", TagDetection.struct)
-                .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
-        odomPub = NetworkTableInstance.getDefault()
-                .getStructTopic("/robot/odom", Twist3d.struct)
-                .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
-        guessPub = NetworkTableInstance.getDefault()
-                .getStructTopic("/robot/multi_tag_pose", Pose3d.struct)
-                .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
-    }
-
     @Override
     public void simulationPeriodic() {
-        var loopStart = WPIUtilJNI.now();
-
         // Update drivetrain simulation
         drivetrain.simulationPeriodic();
 
@@ -208,38 +226,14 @@ public class Robot extends TimedRobot {
         debugField.getObject("EstimatedRobot").setPose(drivetrain.getPose());
         debugField.getObject("EstimatedRobotModules").setPoses(drivetrain.getModulePoses());
 
+        SmartDashboard.putNumberArray("/robot/ground_truth_pose", new double[] {
+            drivetrain.getPose().getX(),
+            drivetrain.getPose().getY(),
+            drivetrain.getPose().getRotation().getRadians()
+        });
+
         // Calculate battery voltage sag due to current draw
         RoboRioSim.setVInVoltage(
                 BatterySim.calculateDefaultBatteryLoadedVoltage(drivetrain.getCurrentDraw()));
-
-
-        // Send twist to gtsam
-        odomPub.set(drivetrain.getTwist(), loopStart);
-        
-        // send tags to gtsam
-        var results = vision.getLatestResult();
-        if (results.getTimestampSeconds() != lastResult.getTimestampSeconds()) {
-            lastResult = results;
-            List<TagDetection> dets = new ArrayList<>();
-            for (var result : results.getTargets()) {
-                dets.add(
-                        new TagDetection(result.getFiducialId(),
-                                result.getDetectedCorners()));
-            }
-            // subtract one uS to hack around gtsam stupidity with upper_bound
-            tagPub.set(dets.toArray(new TagDetection[0]), loopStart - 40000);
-
-            if (results.getMultiTagResult().estimatedPose.isPresent && results.targets.size() >= 1) {
-                var pose = new Pose3d().transformBy(results.getMultiTagResult().estimatedPose.best);
-                // flatten to floor
-                pose = new Pose3d(pose.toPose2d());
-                guessPub.set(pose, loopStart);
-            }
-        } else {
-            // duplicate, drop it
-            // System.out.println("Duplicate");
-        }
-
-        NetworkTableInstance.getDefault().flush();
     }
 }

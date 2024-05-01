@@ -104,4 +104,8 @@ public class Vision {
         if (!Robot.isSimulation()) return null;
         return visionSim.getDebugField();
     }
+
+    public Optional<Matrix<N3, N3>> getCamIntrinsics() {
+        return camera.getCameraMatrix();
+    }
 }

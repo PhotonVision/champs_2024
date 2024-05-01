@@ -1,4 +1,11 @@
 {
+  "HALProvider": {
+    "Other Devices": {
+      "window": {
+        "visible": false
+      }
+    }
+  },
   "NTProvider": {
     "types": {
       "/FMSInfo": "FMSInfo",
@@ -107,18 +114,169 @@
             "open": true
           },
           "open": true
+        }
+      },
+      "cam": {
+        "TagDetection[]##v_/cam/tags": {
+          "open": true
+        },
+        "double[]##v_/cam/gtsam_predicted_corners": {
+          "open": true
+        },
+        "double[]##v_/cam/gtsam_seen_corners": {
+          "open": true
         },
         "open": true
       },
-      "photonvision": {
+      "gtasm_meme": {
+        "input": {
+          "open": true
+        },
+        "open": true,
+        "sim_camera1": {
+          "input": {
+            "open": true
+          },
+          "open": true
+        }
+      },
+      "gtsam_meme": {
+        "input": {
+          "open": true
+        },
+        "open": true,
+        "output": {
+          "Pose3d##v_/gtsam_meme/output/optimized_pose": {
+            "open": true
+          },
+          "double[]##v_/gtsam_meme/output/pose_stddev": {
+            "open": true
+          }
+        },
+        "sim_camera1": {
+          "input": {
+            "Transform3d##v_/gtsam_meme/sim_camera1/input/robotTcam": {
+              "Rotation3d##v_rotation": {
+                "Quaternion##v_q": {
+                  "open": true
+                },
+                "open": true
+              },
+              "open": true
+            },
+            "double[]##v_/gtsam_meme/sim_camera1/input/cam_intrinsics": {
+              "open": true
+            },
+            "open": true
+          },
+          "open": true
+        }
+      },
+      "robot": {
         "open": true
       }
     }
   },
   "NetworkTables Info": {
+    "AdvantageScope@1": {
+      "open": true
+    },
+    "Clients": {
+      "open": true
+    },
+    "glass@1": {
+      "Publishers": {
+        "open": true
+      },
+      "Subscribers": {
+        "open": true
+      },
+      "open": true
+    },
+    "gtsam-meme@1": {
+      "Subscribers": {
+        "open": true
+      },
+      "open": true
+    },
     "visible": true
   },
-  "NetworkTables View": {
-    "visible": false
+  "Plot": {
+    "Plot <0>": {
+      "plots": [
+        {
+          "backgroundColor": [
+            0.0,
+            0.0,
+            0.0,
+            0.8500000238418579
+          ],
+          "height": 193,
+          "series": [
+            {
+              "color": [
+                0.2980392277240753,
+                0.44705885648727417,
+                0.6901960968971252,
+                1.0
+              ],
+              "id": "NT:/cam/update_dt_ms"
+            }
+          ]
+        },
+        {
+          "backgroundColor": [
+            0.0,
+            0.0,
+            0.0,
+            0.8500000238418579
+          ],
+          "height": 193,
+          "series": [
+            {
+              "color": [
+                0.2980392277240753,
+                0.44705885648727417,
+                0.6901960968971252,
+                1.0
+              ],
+              "id": "NT:/cam/gtsam_predicted_corners[0]"
+            },
+            {
+              "color": [
+                0.8666667342185974,
+                0.5176470875740051,
+                0.32156863808631897,
+                1.0
+              ],
+              "id": "NT:/cam/gtsam_predicted_corners[1]"
+            },
+            {
+              "color": [
+                0.3333333432674408,
+                0.658823549747467,
+                0.4078431725502014,
+                1.0
+              ],
+              "id": "NT:/cam/gtsam_seen_corners[0]"
+            },
+            {
+              "color": [
+                0.7686275243759155,
+                0.30588236451148987,
+                0.32156863808631897,
+                1.0
+              ],
+              "id": "NT:/cam/gtsam_seen_corners[1]"
+            }
+          ]
+        }
+      ]
+    },
+    "Plot <1>": {
+      "window": {
+        "visible": false
+      }
+    }
   }
 }
