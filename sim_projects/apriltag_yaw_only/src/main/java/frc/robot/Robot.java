@@ -129,8 +129,13 @@ public class Robot extends TimedRobot {
             // System.out.println("Duplicate");
         }
 
-        gtsamInterface.setCamIntrinsics(vision.getCamIntrinsics());
-        gtsamInterface.sendUpdate(loopStart, tagDetTime, dets, drivetrain.getTwist(), guess, kRobotToCam);
+        // Send odometry updates
+        gtsamInterface.sendOdomUpdate(loopStart, drivetrain.getTwist(), guess);
+        // For each camera we have, send (maybe updated?) calibration and tag detection info
+        gtsamInterface.setCamIntrinsics("sim_camera1", vision.getCamIntrinsics());
+        gtsamInterface.sendVisionUpdate("sim_camera1", tagDetTime, dets, kRobotToCam);
+
+        NetworkTableInstance.getDefault().flush();
     }
 
     @Override

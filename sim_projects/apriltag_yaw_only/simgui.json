@@ -141,17 +141,20 @@
         }
       },
       "gtsam_meme": {
-        "input": {
-          "open": true
-        },
         "open": true,
         "output": {
           "Pose3d##v_/gtsam_meme/output/optimized_pose": {
             "open": true
           },
+          "Pose3d[]##v_/gtsam_meme/output/optimized_traj": {
+            "Pose3d##v_[0]": {
+              "open": true
+            }
+          },
           "double[]##v_/gtsam_meme/output/pose_stddev": {
             "open": true
-          }
+          },
+          "open": true
         },
         "sim_camera1": {
           "input": {
@@ -166,8 +169,7 @@
             },
             "double[]##v_/gtsam_meme/sim_camera1/input/cam_intrinsics": {
               "open": true
-            },
-            "open": true
+            }
           },
           "open": true
         }
