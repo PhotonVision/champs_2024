@@ -9,12 +9,14 @@ import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Twist3d;
+import edu.wpi.first.math.interpolation.TimeInterpolatableBuffer;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.networktables.StructPublisher;
+import edu.wpi.first.networktables.StructSubscriber;
 
 public class GtsamInterface {
     private static class CameraInterface {
@@ -40,6 +42,11 @@ public class GtsamInterface {
     StructPublisher<Twist3d> odomPub;
     StructPublisher<Pose3d> guessPub;
     Map<String, CameraInterface> cameras = new HashMap<>();
+    StructSubscriber<Pose3d> optimizedPoseSub;
+    
+    // Estimated odom-only location relative to robot boot
+    Pose3d localOdometryPose = new Pose3d();
+    TimeInterpolatableBuffer<Pose3d> odometryBuffer = TimeInterpolatableBuffer.createBuffer(5);
 
     public GtsamInterface(List<String> cameraNames) {
         odomPub = NetworkTableInstance.getDefault()
@@ -48,6 +55,9 @@ public class GtsamInterface {
         guessPub = NetworkTableInstance.getDefault()
                 .getStructTopic("/gtsam_meme/input/pose_initial_guess", Pose3d.struct)
                 .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+        optimizedPoseSub = NetworkTableInstance.getDefault()
+                .getStructTopic("/gtsam_meme/output/optimized_pose", Pose3d.struct)
+                .subscribe(null, PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
 
         cameraNames.stream().map(CameraInterface::new).forEach(it -> cameras.put(it.name, it));
     }
@@ -97,7 +107,11 @@ public class GtsamInterface {
 
         if (guess != null) {
             guessPub.set(guess, odomTime);
+            localOdometryPose = guess;
         }
+
+        localOdometryPose = localOdometryPose.exp(odom);
+        odometryBuffer.addSample(odomTime / 1e6, localOdometryPose);
     }
 
     /**
@@ -122,5 +136,25 @@ public class GtsamInterface {
 
         cam.tagPub.set(camDetectedTags.toArray(new TagDetection[0]), tagDetTime);
         cam.robotTcamPub.set(robotTcam, tagDetTime);
+    }
+
+    public Pose3d getLatencyCompensatedPoseEstimate() {
+        var poseEst = optimizedPoseSub.getAtomic();
+        if (poseEst.timestamp != 0) {
+            var poseAtSample = odometryBuffer.getSample(poseEst.timestamp / 1e6);
+            var poseNow = localOdometryPose;
+
+            if (poseAtSample.isEmpty()) {
+                // huh
+                System.err.println("pose outside buffer?");
+                return new Pose3d();
+            }
+
+            var poseDelta = poseNow.minus(poseAtSample.get());
+            return poseEst.value.transformBy(poseDelta);
+        } else {
+            System.err.println("No pose estimate yet");
+            return new Pose3d();
+        }
     }
 }

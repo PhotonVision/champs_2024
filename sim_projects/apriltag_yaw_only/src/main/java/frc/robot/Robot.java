@@ -30,27 +30,18 @@ import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Transform3d;
-import edu.wpi.first.math.geometry.Twist3d;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.PubSub;
-import edu.wpi.first.networktables.PubSubOption;
-import edu.wpi.first.networktables.StructArrayPublisher;
-import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.util.WPIUtilJNI;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.subsystems.drivetrain.SwerveDrive;
 
 import static frc.robot.Constants.Vision.kRobotToCam;
-import static frc.robot.Constants.Vision.kTagLayout;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -76,7 +67,8 @@ public class Robot extends TimedRobot {
     // simple PID controller to aim at the target
     private PIDController aimController = new PIDController(0.02, 0, 0);
 
-    GtsamInterface gtsamInterface = new GtsamInterface();
+    GtsamInterface gtsamInterface = new GtsamInterface(List.of("sim_camera1"));
+    Field2d field = new Field2d();
 
     private PhotonPipelineResult lastResult = new PhotonPipelineResult();
 
@@ -90,6 +82,8 @@ public class Robot extends TimedRobot {
         vision = new Vision();
 
         controller = new XboxController(0);
+
+        SmartDashboard.putData(field);
     }
 
     @Override
@@ -115,7 +109,7 @@ public class Robot extends TimedRobot {
                         new TagDetection(result.getFiducialId(),
                                 result.getDetectedCorners()));
             }
-            
+
             // Totally bogus extra latency
             tagDetTime = loopStart - 10000;
 
@@ -123,7 +117,11 @@ public class Robot extends TimedRobot {
                 var pose = new Pose3d().transformBy(results.getMultiTagResult().estimatedPose.best);
                 // assume robot is sitting on the floor to better constraint guess
                 guess = new Pose3d(pose.toPose2d());
+
             }
+
+            drivetrain.addVisionMeasurement(results, tagDetTime);
+
         } else {
             // duplicate, drop it
             // System.out.println("Duplicate");
@@ -131,9 +129,13 @@ public class Robot extends TimedRobot {
 
         // Send odometry updates
         gtsamInterface.sendOdomUpdate(loopStart, drivetrain.getTwist(), guess);
-        // For each camera we have, send (maybe updated?) calibration and tag detection info
+        // For each camera we have, send (maybe updated?) calibration and tag detection
+        // info
         gtsamInterface.setCamIntrinsics("sim_camera1", vision.getCamIntrinsics());
         gtsamInterface.sendVisionUpdate("sim_camera1", tagDetTime, dets, kRobotToCam);
+
+        field.getObject("latency_compensated_pose_est").setPose(
+                gtsamInterface.getLatencyCompensatedPoseEstimate().toPose2d());
 
         NetworkTableInstance.getDefault().flush();
     }
@@ -232,9 +234,9 @@ public class Robot extends TimedRobot {
         debugField.getObject("EstimatedRobotModules").setPoses(drivetrain.getModulePoses());
 
         SmartDashboard.putNumberArray("/robot/ground_truth_pose", new double[] {
-            drivetrain.getPose().getX(),
-            drivetrain.getPose().getY(),
-            drivetrain.getPose().getRotation().getRadians()
+                drivetrain.getPose().getX(),
+                drivetrain.getPose().getY(),
+                drivetrain.getPose().getRotation().getRadians()
         });
 
         // Calculate battery voltage sag due to current draw
