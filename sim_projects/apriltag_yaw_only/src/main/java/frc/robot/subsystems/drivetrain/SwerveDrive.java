@@ -367,10 +367,5 @@ public class SwerveDrive {
         if (ret.isPresent()) {
             addVisionMeasurement(ret.get().estimatedPose.toPose2d(), tagDetTime / 1e6);
         }
-
-        // var pose = new Pose3d().transformBy(results.getMultiTagResult().estimatedPose.best);
-        // if (results.getMultiTagResult().estimatedPose.isPresent && results.targets.size() >= 1) {
-        //     addVisionMeasurement(pose.plus(kRobotToCam.inverse()).toPose2d(), tagDetTime / 1e6);
-        // } else {}
     }
 }

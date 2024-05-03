@@ -122,10 +122,20 @@ public class Robot extends TimedRobot {
 
             drivetrain.addVisionMeasurement(results, tagDetTime);
 
+            // Publish debug info to NT
+            List<Double> corns = new ArrayList<>();
+            for (var d : dets) {
+                for (var c : d.corners) {
+                    corns.add(c.x);
+                    corns.add(c.y);
+                }
+            }
+            SmartDashboard.putNumberArray("/meme/measured_corners", corns.toArray(new Double[0]));
         } else {
             // duplicate, drop it
             // System.out.println("Duplicate");
         }
+
 
         // Send odometry updates
         gtsamInterface.sendOdomUpdate(loopStart, drivetrain.getTwist(), guess);
