@@ -44,7 +44,7 @@ public class GtsamInterface {
     Map<String, CameraInterface> cameras = new HashMap<>();
     StructSubscriber<Pose3d> optimizedPoseSub;
     
-    // Estimated odom-only location relative to robot boot
+    // Estimated odom-only location relative to robot boot. We assume zero slip here
     Pose3d localOdometryPose = new Pose3d();
     TimeInterpolatableBuffer<Pose3d> odometryBuffer = TimeInterpolatableBuffer.createBuffer(5);
 
@@ -107,7 +107,6 @@ public class GtsamInterface {
 
         if (guess != null) {
             guessPub.set(guess, odomTime);
-            localOdometryPose = guess;
         }
 
         localOdometryPose = localOdometryPose.exp(odom);
