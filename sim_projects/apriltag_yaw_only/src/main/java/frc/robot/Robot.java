@@ -30,6 +30,7 @@ import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.networktables.NetworkTableEvent;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.util.WPIUtilJNI;
 import edu.wpi.first.wpilibj.TimedRobot;
@@ -42,6 +43,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.subsystems.drivetrain.SwerveDrive;
 
 import static frc.robot.Constants.Vision.kRobotToCam;
+
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -78,6 +81,8 @@ public class Robot extends TimedRobot {
 
     @Override
     public void robotInit() {
+        NetworkTableInstance.getDefault().addLogger(7, 255, this::logNtMessage);
+
         drivetrain = new SwerveDrive();
         vision = new Vision();
 
@@ -252,5 +257,28 @@ public class Robot extends TimedRobot {
         // Calculate battery voltage sag due to current draw
         RoboRioSim.setVInVoltage(
                 BatterySim.calculateDefaultBatteryLoadedVoltage(drivetrain.getCurrentDraw()));
+    }
+
+    private void logNtMessage(NetworkTableEvent e) {
+        var file = Path.of(e.logMessage.filename).getFileName().toString();
+
+        var level = e.logMessage.level;
+        var line = e.logMessage.line;
+        var msg = e.logMessage.message;
+        String levelmsg;
+        if (level >= 50) {
+            levelmsg = "CRITICAL";
+        } else if (level >= 40) {
+            levelmsg = "ERROR";
+        } else if (level >= 30) {
+            levelmsg = "WARNING";
+        } else if (level >= 20) {
+            levelmsg = "INFO";
+        } else {
+            levelmsg = "DEBUG";
+        }
+
+        System.out.println(
+                "NT: " + levelmsg + " " + level + ": " + msg + " (" + file + ":" + line + ")");
     }
 }
