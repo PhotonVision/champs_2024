@@ -34,6 +34,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.numbers.N5;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import java.util.Optional;
 import org.photonvision.EstimatedRobotPose;
@@ -107,5 +108,9 @@ public class Vision {
 
     public Optional<Matrix<N3, N3>> getCamIntrinsics() {
         return camera.getCameraMatrix();
+    }
+
+    public Optional<Matrix<?, N1>> getCamDistortionCoeffs() {
+        return (Optional<Matrix<?, N1>>) ((Optional)camera.getDistCoeffs());
     }
 }

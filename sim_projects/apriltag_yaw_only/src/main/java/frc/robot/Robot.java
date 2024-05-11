@@ -146,7 +146,7 @@ public class Robot extends TimedRobot {
         gtsamInterface.sendOdomUpdate(loopStart, drivetrain.getTwist(), guess);
         // For each camera we have, send (maybe updated?) calibration and tag detection
         // info
-        gtsamInterface.setCamIntrinsics("sim_camera1", vision.getCamIntrinsics());
+        gtsamInterface.setCamIntrinsics("sim_camera1", vision.getCamIntrinsics(), vision.getCamDistortionCoeffs());
         gtsamInterface.sendVisionUpdate("sim_camera1", tagDetTime, dets, kRobotToCam);
 
         field.getObject("latency_compensated_pose_est").setPose(

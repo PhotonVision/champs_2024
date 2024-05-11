@@ -5,11 +5,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.opencv.calib3d.Calib3d;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfDouble;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.Point;
+import org.opencv.core.TermCriteria;
+import org.photonvision.estimation.OpenCVHelp;
+import org.photonvision.targeting.TargetCorner;
+
+import java.util.stream.Collectors;
+
+import edu.wpi.first.cscore.CvSink;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Twist3d;
 import edu.wpi.first.math.interpolation.TimeInterpolatableBuffer;
+import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -19,11 +32,44 @@ import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.networktables.StructSubscriber;
 
 public class GtsamInterface {
+
+    public static class CameraCalibration {
+        Mat cameraMat;
+        Mat distCoeffs;
+
+        public CameraCalibration(Matrix<N3, N3> camMat, Matrix<?, N1> distCoeffs) {
+            OpenCVHelp.forceLoadOpenCV();
+
+            this.cameraMat = OpenCVHelp.matrixToMat(camMat.getStorage());
+            this.distCoeffs = OpenCVHelp.matrixToMat(distCoeffs.getStorage());
+        }
+
+        public void release() {
+            cameraMat.release();
+            distCoeffs.release();
+        }
+    }
+
     private static class CameraInterface {
         StructArrayPublisher<TagDetection> tagPub;
         DoubleArrayPublisher camIntrinsicsPublisher;
         StructPublisher<Transform3d> robotTcamPub;
         private String name;
+
+        private CameraCalibration cameraCal = null;
+
+        public TagDetection undistort(TagDetection distorted) {
+            if (this.cameraCal == null) {
+                System.err.println("Camera cal still null -- is your camera connected?");
+                return distorted;
+            }
+
+            var mat = new MatOfPoint2f(distorted.corners.stream().map(it -> new Point(it.x, it.y))
+                    .collect(Collectors.toList()).toArray(new Point[0]));
+            Calib3d.undistortImagePoints(mat, mat, cameraCal.cameraMat, cameraCal.distCoeffs, new TermCriteria(3, 30, 1e-6));
+            return new TagDetection(distorted.id,
+                    mat.toList().stream().map(it -> new TargetCorner(it.x, it.y)).collect(Collectors.toList()));
+        }
 
         public CameraInterface(String name) {
             this.name = name;
@@ -43,7 +89,7 @@ public class GtsamInterface {
     StructPublisher<Pose3d> guessPub;
     Map<String, CameraInterface> cameras = new HashMap<>();
     StructSubscriber<Pose3d> optimizedPoseSub;
-    
+
     // Estimated odom-only location relative to robot boot. We assume zero slip here
     Pose3d localOdometryPose = new Pose3d();
     TimeInterpolatableBuffer<Pose3d> odometryBuffer = TimeInterpolatableBuffer.createBuffer(5);
@@ -69,9 +115,11 @@ public class GtsamInterface {
      * @param camName    The name of the camera
      * @param intrinsics Camera intrinsics in standard OpenCV format. See:
      *                   https://docs.opencv.org/4.x/d9/d0c/group__calib3d.html
+     * @param distCoeffs Camera distortion coefficients, of length 4, 5 or 8
      */
-    public void setCamIntrinsics(String camName, Optional<Matrix<N3, N3>> intrinsics) {
-        if (intrinsics.isEmpty()) {
+    public void setCamIntrinsics(String camName, Optional<Matrix<N3, N3>> intrinsics,
+            Optional<Matrix<?, N1>> distCoeffs) {
+        if (intrinsics.isEmpty() || distCoeffs.isEmpty()) {
             return;
         }
 
@@ -86,6 +134,8 @@ public class GtsamInterface {
                 intrinsics.get().get(0, 2),
                 intrinsics.get().get(1, 2),
         });
+
+        cam.cameraCal = new CameraCalibration(intrinsics.get(), distCoeffs.get());
     }
 
     /**
@@ -133,7 +183,8 @@ public class GtsamInterface {
             throw new RuntimeException("Camera " + camName + " not in map!");
         }
 
-        cam.tagPub.set(camDetectedTags.toArray(new TagDetection[0]), tagDetTime);
+        cam.tagPub.set(camDetectedTags.stream().map(it -> cam.undistort(it)).collect(Collectors.toList())
+                .toArray(new TagDetection[0]), tagDetTime);
         cam.robotTcamPub.set(robotTcam, tagDetTime);
     }
 
