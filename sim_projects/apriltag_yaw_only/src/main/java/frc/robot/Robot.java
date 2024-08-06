@@ -40,17 +40,27 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.subsystems.drivetrain.SwerveDrive;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Robot extends TimedRobot {
     private SwerveDrive drivetrain;
     private Vision vision;
 
-    private XboxController controller;
+    private CommandXboxController controller;
     // Limit max speed
     private final double kDriveSpeed = 0.6;
     // Rudimentary limiting of drivetrain acceleration
@@ -64,16 +74,44 @@ public class Robot extends TimedRobot {
     // simple PID controller to aim at the target
     private PIDController aimController = new PIDController(0.02, 0, 0);
 
+    FileWriter log = null;
+
     @Override
     public void robotInit() {
+        try {
+            log = new FileWriter("out.txt");
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
         drivetrain = new SwerveDrive();
         vision = new Vision();
 
-        controller = new XboxController(0);
+        controller = new CommandXboxController(0);
+
+        controller.button(1).onTrue(new InstantCommand(() -> {
+            System.out.println("hi");
+            try {
+                List<TagDetection> dets = new ArrayList<>();
+                for (var result : vision.getLatestResult().getTargets()) {
+                    dets.add(
+                            new TagDetection(result.getFiducialId(),
+                                    result.getDetectedCorners()));
+                }
+                log.write(new ObjectMapper().writeValueAsString(dets) + "\n");
+                log.flush();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }));
     }
 
     @Override
     public void robotPeriodic() {
+        CommandScheduler.getInstance().run();
+
         drivetrain.periodic();
 
         // Log values to the dashboard
@@ -143,7 +181,7 @@ public class Robot extends TimedRobot {
 
         double turn;
         // bound to "Z" on your keyboard
-        if (controller.getRawButton(1)) {
+        if (controller.getHID().getRawButton(1)) {
             turn = getTurnPower();
         } else {
             turn = -controller.getRightX() * kDriveSpeed;
