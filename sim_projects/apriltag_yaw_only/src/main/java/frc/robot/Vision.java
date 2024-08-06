@@ -74,6 +74,9 @@ public class Vision {
             visionSim.addCamera(cameraSim, kRobotToCam);
 
             cameraSim.enableDrawWireframe(true);
+
+            System.out.println("Camera core: " + cameraProp.getIntrinsics());
+            System.out.println("Camera distortion: " + cameraProp.getDistCoeffs());
         }
     }
 
