@@ -73,7 +73,7 @@ public class Vision {
             // Add the simulated camera to view the targets on this simulated field.
             visionSim.addCamera(cameraSim, kRobotToCam);
 
-            cameraSim.enableDrawWireframe(true);
+            // cameraSim.enableDrawWireframe(true);
 
             System.out.println("Camera core: " + cameraProp.getIntrinsics());
             System.out.println("Camera distortion: " + cameraProp.getDistCoeffs());

@@ -2,9 +2,21 @@
   "NTProvider": {
     "types": {
       "/FMSInfo": "FMSInfo",
+      "/SmartDashboard/FieldEstimation": "Field2d",
       "/SmartDashboard/VisionSystemSim-main/Sim Field": "Field2d"
     },
     "windows": {
+      "/SmartDashboard/FieldEstimation": {
+        "bottom": 1476,
+        "height": 8.210550308227539,
+        "left": 150,
+        "right": 2961,
+        "top": 79,
+        "width": 16.541748046875,
+        "window": {
+          "visible": true
+        }
+      },
       "/SmartDashboard/VisionSystemSim-main/Sim Field": {
         "EstimatedRobot": {
           "arrowWeight": 3.0,
@@ -107,8 +119,24 @@
             "open": true
           },
           "open": true
-        },
-        "open": true
+        }
+      },
+      "cam": {
+        "TagDetection[]##v_/cam/tags": {
+          "TagDetection##v_[0]": {
+            "open": true
+          },
+          "TagDetection##v_[1]": {
+            "open": true
+          },
+          "open": true
+        }
+      },
+      "gtsam_meme": {
+        "open": true,
+        "output": {
+          "open": true
+        }
       },
       "photonvision": {
         "open": true
@@ -117,8 +145,5 @@
   },
   "NetworkTables Info": {
     "visible": true
-  },
-  "NetworkTables View": {
-    "visible": false
   }
 }

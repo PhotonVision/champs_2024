@@ -30,10 +30,12 @@ import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Twist3d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSub;
 import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.networktables.StructArrayPublisher;
+import edu.wpi.first.networktables.StructArraySubscriber;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
@@ -53,6 +55,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
+
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -76,6 +81,8 @@ public class Robot extends TimedRobot {
 
     FileWriter log = null;
 
+    private final Field2d m_fieldApproximation = new Field2d();
+
     @Override
     public void robotInit() {
         try {
@@ -88,23 +95,28 @@ public class Robot extends TimedRobot {
         drivetrain = new SwerveDrive();
         vision = new Vision();
 
+        SmartDashboard.putData("FieldEstimation", m_fieldApproximation);
+
         controller = new CommandXboxController(0);
 
         controller.button(1).onTrue(new InstantCommand(() -> {
-            System.out.println("hi");
+            List<TagDetection> dets = new ArrayList<>();
+            for (var result : vision.getLatestResult().getTargets()) {
+                dets.add(
+                        new TagDetection(result.getFiducialId(),
+                                result.getDetectedCorners()));
+            }
+
             try {
-                List<TagDetection> dets = new ArrayList<>();
-                for (var result : vision.getLatestResult().getTargets()) {
-                    dets.add(
-                            new TagDetection(result.getFiducialId(),
-                                    result.getDetectedCorners()));
-                }
                 log.write(new ObjectMapper().writeValueAsString(dets) + "\n");
                 log.flush();
+                System.out.println("field->camera " + new Pose3d(drivetrain.getSimPose()).plus(Constants.Vision.kRobotToCam).toString());
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
+
+            tagPub.set(dets.toArray(new TagDetection[0]));
         }));
     }
 
@@ -201,12 +213,16 @@ public class Robot extends TimedRobot {
 
     StructArrayPublisher<TagDetection> tagPub;
     StructPublisher<Twist3d> odomPub;
+    StructArraySubscriber<Pose3d> tagSub;
 
     @Override
     public void simulationInit() {
         tagPub = NetworkTableInstance.getDefault()
                 .getStructArrayTopic("/cam/tags", TagDetection.struct)
                 .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+        tagSub = NetworkTableInstance.getDefault()
+                .getStructArrayTopic("/out/tag_ests", Pose3d.struct)
+                .subscribe(new Pose3d[0]);
         odomPub = NetworkTableInstance.getDefault()
                 .getStructTopic("/robot/odom", Twist3d.struct)
                 .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
@@ -229,12 +245,12 @@ public class Robot extends TimedRobot {
                 BatterySim.calculateDefaultBatteryLoadedVoltage(drivetrain.getCurrentDraw()));
 
         odomPub.set(drivetrain.getTwist());
-        List<TagDetection> dets = new ArrayList<>();
-        for (var result : vision.getLatestResult().getTargets()) {
-            dets.add(
-                    new TagDetection(result.getFiducialId(),
-                            result.getDetectedCorners()));
+
+        List<Pose2d> tags = new ArrayList<>();
+        for (var tag : tagSub.get()) {
+            tags.add(tag.toPose2d());
         }
-        tagPub.set(dets.toArray(new TagDetection[0]));
+
+        m_fieldApproximation.getObject("measured tags").setPoses(tags);
     }
 }
