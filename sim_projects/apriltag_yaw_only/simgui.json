@@ -1,12 +1,32 @@
 {
+  "HALProvider": {
+    "Other Devices": {
+      "window": {
+        "visible": false
+      }
+    }
+  },
   "NTProvider": {
     "types": {
       "/FMSInfo": "FMSInfo",
+      "/SmartDashboard/Field": "Field2d",
       "/SmartDashboard/FieldEstimation": "Field2d",
+      "/SmartDashboard/GtsamMeme": "Field2d",
       "/SmartDashboard/VisionSystemSim-main/Sim Field": "Field2d"
     },
     "windows": {
       "/SmartDashboard/FieldEstimation": {
+        "bottom": 1476,
+        "height": 8.210550308227539,
+        "left": 150,
+        "right": 2961,
+        "top": 79,
+        "width": 16.541748046875,
+        "window": {
+          "visible": true
+        }
+      },
+      "/SmartDashboard/GtsamMeme": {
         "bottom": 1476,
         "height": 8.210550308227539,
         "left": 150,
@@ -111,15 +131,18 @@
   "NetworkTables": {
     "transitory": {
       "SmartDashboard": {
+        "Field": {
+          "open": true
+        },
         "VisionSystemSim-main": {
           "Sim Field": {
             "double[]##v_/SmartDashboard/VisionSystemSim-main/Sim Field/Robot": {
               "open": true
             },
             "open": true
-          },
-          "open": true
-        }
+          }
+        },
+        "open": true
       },
       "cam": {
         "TagDetection[]##v_/cam/tags": {
@@ -144,6 +167,24 @@
     }
   },
   "NetworkTables Info": {
+    "Clients": {
+      "open": true
+    },
+    "Server": {
+      "open": true
+    },
+    "gtsam-mapper-meme@1": {
+      "Publishers": {
+        "open": true
+      },
+      "Subscribers": {
+        "open": true
+      },
+      "open": true
+    },
     "visible": true
+  },
+  "NetworkTables View": {
+    "visible": false
   }
 }

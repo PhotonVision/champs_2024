@@ -81,8 +81,6 @@ public class Robot extends TimedRobot {
 
     FileWriter log = null;
 
-    private final Field2d m_fieldApproximation = new Field2d();
-
     @Override
     public void robotInit() {
         try {
@@ -94,8 +92,6 @@ public class Robot extends TimedRobot {
 
         drivetrain = new SwerveDrive();
         vision = new Vision();
-
-        SmartDashboard.putData("FieldEstimation", m_fieldApproximation);
 
         controller = new CommandXboxController(0);
 
@@ -193,11 +189,11 @@ public class Robot extends TimedRobot {
 
         double turn;
         // bound to "Z" on your keyboard
-        if (controller.getHID().getRawButton(1)) {
-            turn = getTurnPower();
-        } else {
+        // if (controller.getHID().getRawButton(1)) {
+            // turn = getTurnPower();
+        // } else {
             turn = -controller.getRightX() * kDriveSpeed;
-        }
+        // }
 
         turn = turnLimiter.calculate(turn);
         turn = MathUtil.applyDeadband(turn, 0.1);
@@ -245,12 +241,5 @@ public class Robot extends TimedRobot {
                 BatterySim.calculateDefaultBatteryLoadedVoltage(drivetrain.getCurrentDraw()));
 
         odomPub.set(drivetrain.getTwist());
-
-        List<Pose2d> tags = new ArrayList<>();
-        for (var tag : tagSub.get()) {
-            tags.add(tag.toPose2d());
-        }
-
-        m_fieldApproximation.getObject("measured tags").setPoses(tags);
     }
 }
