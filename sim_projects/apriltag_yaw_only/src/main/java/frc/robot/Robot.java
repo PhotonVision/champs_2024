@@ -71,11 +71,6 @@ public class Robot extends TimedRobot {
     StructArrayPublisher<TagDetection> tagPub;
     StructPublisher<Twist3d> odomPub;
 
-    private DataLog m_log;
-    // handles for entry/connection loggers
-    private int m_ntEntryLogger;
-    private int m_ntConnLogger;
-
     @Override
     public void robotInit() {
         drivetrain = new SwerveDrive();
@@ -92,12 +87,8 @@ public class Robot extends TimedRobot {
                 .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
 
         DataLogManager.start();
-        DataLogManager.logNetworkTables(false);
-        m_log = DataLogManager.getLog();
-
-        NetworkTableInstance inst = NetworkTableInstance.getDefault();
-        m_ntEntryLogger = inst.startEntryDataLog(m_log, "/gtsam_meme", "NT:");
-        m_ntConnLogger = inst.startConnectionDataLog(m_log, "NTConnection");
+        // paranoia
+        DataLogManager.logNetworkTables(true);
     }
 
     @Override
