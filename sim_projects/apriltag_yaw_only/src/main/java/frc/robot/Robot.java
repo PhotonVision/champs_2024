@@ -34,6 +34,8 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.networktables.StructPublisher;
+import edu.wpi.first.util.datalog.DataLog;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
@@ -69,6 +71,11 @@ public class Robot extends TimedRobot {
     StructArrayPublisher<TagDetection> tagPub;
     StructPublisher<Twist3d> odomPub;
 
+    private DataLog m_log;
+    // handles for entry/connection loggers
+    private int m_ntEntryLogger;
+    private int m_ntConnLogger;
+
     @Override
     public void robotInit() {
         drivetrain = new SwerveDrive();
@@ -78,11 +85,19 @@ public class Robot extends TimedRobot {
 
         // setup tag/odometry publisher
         tagPub = NetworkTableInstance.getDefault()
-                .getStructArrayTopic("/cam/tags", TagDetection.struct)
+                .getStructArrayTopic("/gtsam_meme/cam1/tags", TagDetection.struct)
                 .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
         odomPub = NetworkTableInstance.getDefault()
-                .getStructTopic("/robot/odom", Twist3d.struct)
+                .getStructTopic("/gtsam_meme/robot_odom", Twist3d.struct)
                 .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+
+        DataLogManager.start();
+        DataLogManager.logNetworkTables(false);
+        m_log = DataLogManager.getLog();
+
+        NetworkTableInstance inst = NetworkTableInstance.getDefault();
+        m_ntEntryLogger = inst.startEntryDataLog(m_log, "/gtsam_meme", "NT:");
+        m_ntConnLogger = inst.startConnectionDataLog(m_log, "NTConnection");
     }
 
     @Override
