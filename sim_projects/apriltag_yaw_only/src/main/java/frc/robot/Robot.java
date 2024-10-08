@@ -167,6 +167,8 @@ public class Robot extends TimedRobot {
 
             tagPub.set(dets.toArray(new TagDetection[0]));
         }
+
+        DataLogManager.getLog().flush();
     }
 
     @Override
