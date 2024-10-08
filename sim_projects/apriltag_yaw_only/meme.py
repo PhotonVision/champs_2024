@@ -6,11 +6,11 @@ import struct
 for file in os.listdir("logs"):
     reader = DataLogReader(f"logs/{file}")
 
-    startRecordMap: Dict[int, StartRecordData] = {}
+    startRecordsByTopic: Dict[int, StartRecordData] = {}
 
     messagesByTopic: Dict[int, List[DataLogRecord]] = {}
 
-    schemasByTopic: Dict[int, str] = {}
+    schemasByTypename: Dict[str, str] = {}
 
     for entry in reader:
         if entry.isStart():
@@ -18,7 +18,7 @@ for file in os.listdir("logs"):
 
             # print(f"Start record on topic {data.entry} : {data.name}")
             
-            startRecordMap[data.entry] = data
+            startRecordsByTopic[data.entry] = data
             messagesByTopic[data.entry] = []
 
         elif entry.isFinish():
@@ -33,26 +33,43 @@ for file in os.listdir("logs"):
             pass
         else:
             # print(f"Normal message published on topic ID {entry.getEntry()}: len {entry.getSize()}")
-            if entry.getEntry() in startRecordMap.keys():
+            if entry.getEntry() in startRecordsByTopic.keys():
                 messagesByTopic[entry.getEntry()].append(entry)
 
-            startData = startRecordMap[entry.getEntry()]
+            startData = startRecordsByTopic[entry.getEntry()]
             
             if ".schema/struct:" in startData.name:
-                print(startData.name)
-                print(entry.getRaw().decode())
+                # print(startData.name)
+                # print(entry.getRaw().decode())
 
                 # huge hack
                 if "TagDetection" in startData.name:
-                    schemasByTopic[entry.getEntry()] = "<Ldddddddd"
+                    schemasByTypename[startData.name[startData.name.index("struct:") + len("struct:"):]] = "<Ldddddddd"
                 if "Twist3d" in startData.name:
-                    schemasByTopic[entry.getEntry()] = "<dddddd"
+                    schemasByTypename[startData.name[startData.name.index("struct:") + len("struct:"):]] = "<dddddd"
 
-    
+    print(schemasByTypename)
+    for topic, messageList in messagesByTopic.items():
+        if "gtsam" not in startRecordsByTopic[topic].name:
+            continue
 
-    # print("")
-    # print(f"Topics in {file}:")
-    # for (key, topic) in startRecordMap.items():
-    #     print("  " + topic.name)
+        topic_typestring = startRecordsByTopic[messageList[0].getEntry()].type
+        schema = schemasByTypename[topic_typestring[len("struct:"):]]
+
+        decoded = []
+        for message in messageList:
+            decoded.append((message.getTimestamp(), struct.unpack(schema, message.getRaw())))
+
+        print(decoded)
+
+
+    print("")
+    print(f"Topics in {file}:")
+    for (key, topic) in startRecordsByTopic.items():
+        # filter
+        if "gtsam" not in topic.name:
+            continue
+
+        print("  " + topic.name + f": {len(messagesByTopic[key])} messages")
 
     print("=========")
