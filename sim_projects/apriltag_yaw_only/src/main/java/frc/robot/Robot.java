@@ -30,42 +30,29 @@ import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Twist3d;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.PubSub;
 import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.networktables.StructArrayPublisher;
-import edu.wpi.first.networktables.StructArraySubscriber;
 import edu.wpi.first.networktables.StructPublisher;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.subsystems.drivetrain.SwerveDrive;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
-
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Robot extends TimedRobot {
     private SwerveDrive drivetrain;
     private Vision vision;
 
-    private CommandXboxController controller;
+    private XboxController controller;
+
     // Limit max speed
     private final double kDriveSpeed = 0.6;
     // Rudimentary limiting of drivetrain acceleration
@@ -79,41 +66,23 @@ public class Robot extends TimedRobot {
     // simple PID controller to aim at the target
     private PIDController aimController = new PIDController(0.02, 0, 0);
 
-    FileWriter log = null;
+    StructArrayPublisher<TagDetection> tagPub;
+    StructPublisher<Twist3d> odomPub;
 
     @Override
     public void robotInit() {
-        try {
-            log = new FileWriter("out.txt");
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
         drivetrain = new SwerveDrive();
         vision = new Vision();
 
-        controller = new CommandXboxController(0);
+        controller = new XboxController(0);
 
-        controller.button(1).onTrue(new InstantCommand(() -> {
-            List<TagDetection> dets = new ArrayList<>();
-            for (var result : vision.getLatestResult().getTargets()) {
-                dets.add(
-                        new TagDetection(result.getFiducialId(),
-                                result.getDetectedCorners()));
-            }
-
-            try {
-                log.write(new ObjectMapper().writeValueAsString(dets) + "\n");
-                log.flush();
-                System.out.println("field->camera " + new Pose3d(drivetrain.getSimPose()).plus(Constants.Vision.kRobotToCam).toString());
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-
-            tagPub.set(dets.toArray(new TagDetection[0]));
-        }));
+        // setup tag/odometry publisher
+        tagPub = NetworkTableInstance.getDefault()
+                .getStructArrayTopic("/cam/tags", TagDetection.struct)
+                .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+        odomPub = NetworkTableInstance.getDefault()
+                .getStructTopic("/robot/odom", Twist3d.struct)
+                .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
     }
 
     @Override
@@ -173,28 +142,37 @@ public class Robot extends TimedRobot {
         return 0;
     }
 
+    public void sendGtsamMemes() {
+        // Record odometry twists
+        var now = RobotController.getFPGATime();
+        odomPub.set(drivetrain.getTwist(), now);
+
+        // Record snapshots if the button is pressed
+        if (controller.getRawButtonPressed(1)) {
+            List<TagDetection> dets = new ArrayList<>();
+            for (var result : vision.getLatestResult().getTargets()) {
+                dets.add(
+                        new TagDetection(result.getFiducialId(),
+                                result.getDetectedCorners()));
+            }
+
+            tagPub.set(dets.toArray(new TagDetection[0]));
+        }
+    }
+
     @Override
     public void teleopPeriodic() {
-        // We will use an "arcade drive" scheme to turn joystick values into target
-        // robot speeds
-        // We want to get joystick values where pushing forward/left is positive
         double forward = -controller.getLeftY() * kDriveSpeed;
         if (Math.abs(forward) < 0.1)
             forward = 0; // deadband small values
         forward = forwardLimiter.calculate(forward); // limit acceleration
+
         double strafe = -controller.getLeftX() * kDriveSpeed;
         if (Math.abs(strafe) < 0.1)
             strafe = 0;
         strafe = strafeLimiter.calculate(strafe);
 
-        double turn;
-        // bound to "Z" on your keyboard
-        // if (controller.getHID().getRawButton(1)) {
-            // turn = getTurnPower();
-        // } else {
-            turn = -controller.getRightX() * kDriveSpeed;
-        // }
-
+        double turn = -controller.getRightX() * kDriveSpeed;
         turn = turnLimiter.calculate(turn);
         turn = MathUtil.applyDeadband(turn, 0.1);
 
@@ -205,23 +183,6 @@ public class Robot extends TimedRobot {
 
         // Command drivetrain motors based on target speeds
         drivetrain.drive(forward, strafe, turn, true);
-    }
-
-    StructArrayPublisher<TagDetection> tagPub;
-    StructPublisher<Twist3d> odomPub;
-    StructArraySubscriber<Pose3d> tagSub;
-
-    @Override
-    public void simulationInit() {
-        tagPub = NetworkTableInstance.getDefault()
-                .getStructArrayTopic("/cam/tags", TagDetection.struct)
-                .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
-        tagSub = NetworkTableInstance.getDefault()
-                .getStructArrayTopic("/out/tag_ests", Pose3d.struct)
-                .subscribe(new Pose3d[0]);
-        odomPub = NetworkTableInstance.getDefault()
-                .getStructTopic("/robot/odom", Twist3d.struct)
-                .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
     }
 
     @Override
@@ -239,7 +200,5 @@ public class Robot extends TimedRobot {
         // Calculate battery voltage sag due to current draw
         RoboRioSim.setVInVoltage(
                 BatterySim.calculateDefaultBatteryLoadedVoltage(drivetrain.getCurrentDraw()));
-
-        odomPub.set(drivetrain.getTwist());
     }
 }

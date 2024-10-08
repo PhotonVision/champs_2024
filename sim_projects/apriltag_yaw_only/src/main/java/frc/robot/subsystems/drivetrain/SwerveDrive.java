@@ -71,6 +71,9 @@ public class SwerveDrive {
 
     private ChassisSpeeds targetChassisSpeeds = new ChassisSpeeds();
 
+    // for wheel position deltas
+    SwerveDriveWheelPositions lastPositions;
+
     // ----- Simulation
     private final ADXRS450_GyroSim gyroSim;
     private final SwerveDriveSim swerveDriveSim;
@@ -104,6 +107,8 @@ public class SwerveDrive {
                         DCMotor.getFalcon500(1),
                         kSteerGearRatio,
                         kinematics);
+
+        lastPositions = new SwerveDriveWheelPositions(getModulePositions());
     }
 
     public void periodic() {
@@ -334,10 +339,7 @@ public class SwerveDrive {
         return totalCurrentDraw;
     }
 
-    SwerveDriveWheelPositions lastPositions = new SwerveDriveWheelPositions(getModulePositions());
-
     public Twist3d getTwist() {
-
         var now = new SwerveDriveWheelPositions(getModulePositions());
         var twist = kinematics.toTwist2d(lastPositions, now);
         lastPositions = now;
