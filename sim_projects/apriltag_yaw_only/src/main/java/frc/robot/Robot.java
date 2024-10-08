@@ -89,6 +89,8 @@ public class Robot extends TimedRobot {
         DataLogManager.start();
         // paranoia
         DataLogManager.logNetworkTables(true);
+        DataLogManager.getLog().addSchema(TagDetection.struct);
+        DataLogManager.getLog().addSchema(Twist3d.struct);
     }
 
     @Override
@@ -168,6 +170,8 @@ public class Robot extends TimedRobot {
 
     @Override
     public void teleopPeriodic() {
+        sendGtsamMemes();
+
         double forward = -controller.getLeftY() * kDriveSpeed;
         if (Math.abs(forward) < 0.1)
             forward = 0; // deadband small values
