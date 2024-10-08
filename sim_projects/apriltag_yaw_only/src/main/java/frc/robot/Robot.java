@@ -78,6 +78,10 @@ public class Robot extends TimedRobot {
 
         controller = new XboxController(0);
 
+        DataLogManager.start();
+        // paranoia
+        DataLogManager.logNetworkTables(true);
+
         // setup tag/odometry publisher
         tagPub = NetworkTableInstance.getDefault()
                 .getStructArrayTopic("/gtsam_meme/cam1/tags", TagDetection.struct)
@@ -86,11 +90,8 @@ public class Robot extends TimedRobot {
                 .getStructTopic("/gtsam_meme/robot_odom", Twist3d.struct)
                 .publish(PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
 
-        DataLogManager.start();
-        // paranoia
-        DataLogManager.logNetworkTables(true);
-        DataLogManager.getLog().addSchema(TagDetection.struct);
-        DataLogManager.getLog().addSchema(Twist3d.struct);
+        // NetworkTableInstance.getDefault().addSchema(TagDetection.struct);
+        // NetworkTableInstance.getDefault().addSchema(Twist3d.struct);
     }
 
     @Override
