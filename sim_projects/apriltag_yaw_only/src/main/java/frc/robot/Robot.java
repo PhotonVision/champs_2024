@@ -73,14 +73,14 @@ public class Robot extends TimedRobot {
 
     @Override
     public void robotInit() {
+        // put the start call first
+        DataLogManager.start();
+
         drivetrain = new SwerveDrive();
         vision = new Vision();
 
         controller = new XboxController(0);
 
-        DataLogManager.start();
-        // paranoia
-        DataLogManager.logNetworkTables(true);
 
         // setup tag/odometry publisher
         tagPub = NetworkTableInstance.getDefault()
