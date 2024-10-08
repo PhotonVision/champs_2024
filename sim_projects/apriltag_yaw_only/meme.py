@@ -15,7 +15,7 @@ for file in os.listdir("logs"):
 
     startRecordsByTopic: Dict[int, StartRecordData] = {}
 
-    messagesByTopic: Dict[int, List[DataLogRecord]] = {}
+    messagesByTopic: Dict[int, list] = {}
 
     schemasByTypename: Dict[str, Schema] = {}
 
@@ -25,7 +25,7 @@ for file in os.listdir("logs"):
         if entry.isStart():
             data = entry.getStartData()
 
-            print(f"Start record on topic {data.entry} : {data.name}")
+            # print(f"Start record on topic {data.entry} : {data.name}")
             
             startRecordsByTopic[data.entry] = data
             messagesByTopic[data.entry] = []
@@ -40,12 +40,10 @@ for file in os.listdir("logs"):
             # print(f"Set metadata record on topic {data}")
             pass
         else:
-            print(f"Normal message published on topic ID {entry.getEntry()}: len {entry.getSize()}")
+            # print(f"Normal message published on topic ID {entry.getEntry()}: len {entry.getSize()}")
+
             if entry.getEntry() in startRecordsByTopic.keys():
                 messagesByTopic[entry.getEntry()].append(entry)
-
-                if entry.getEntry() == 55:
-                    pass
             else:
                 print(f"Unknown message encountered")
                 continue
@@ -65,21 +63,28 @@ for file in os.listdir("logs"):
                         namedtuple('Twist3d', 'dx dy dz rx ry rz')
                     )
 
-    # print(schemasByTypename)
-    for topic, messageList in messagesByTopic.items():
-        if "gtsam" not in startRecordsByTopic[topic].name:
-            continue
+            # apparently saving the record for later is a Bad Idea? so process it immediately
+            if "struct:" in startData.type:
+                topic_typestring = startData.type
 
-        topic_typestring = startRecordsByTopic[messageList[0].getEntry()].type
-        schema = schemasByTypename[topic_typestring[len("struct:"):]]
+                if topic_typestring.endswith("[]"):
+                    schema = schemasByTypename[topic_typestring[len("struct:"):-2]]
 
-        decoded = []
-        print(startRecordsByTopic[topic].name)
-        for message in messageList:
-            print(message.getRaw())
-            decoded.append((message.getTimestamp(), schema.tuple._make(struct.unpack(schema.unpack, message.getRaw()))))
+                    inner = []
+                    data = entry.getRaw()
+                    inner_len = struct.calcsize(schema.unpack)
+                    for i in range(0, entry.getSize(), inner_len):
+                        decoded = schema.tuple._make(struct.unpack(schema.unpack, data[i:i+inner_len]))
+                        inner.append((entry.getTimestamp(), decoded))
+                    messagesByTopic[entry.getEntry()].append(inner)
+                    print(inner)
+                else:
+                    schema = schemasByTypename[topic_typestring[len("struct:"):]]
 
-        print(decoded)
+                    decoded = schema.tuple._make(struct.unpack(schema.unpack, entry.getRaw()))
+                    messagesByTopic[entry.getEntry()].append((entry.getTimestamp(), decoded))
+
+                    print(decoded)
 
 
     print("")
