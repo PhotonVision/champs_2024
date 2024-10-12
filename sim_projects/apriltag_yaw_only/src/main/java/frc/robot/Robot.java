@@ -71,6 +71,10 @@ public class Robot extends TimedRobot {
     StructArrayPublisher<TagDetection> tagPub;
     StructPublisher<Twist3d> odomPub;
 
+    public Robot() {
+        super(Constants.ROBOT_PERIOD);
+    }
+
     @Override
     public void robotInit() {
         // put the start call first
@@ -151,10 +155,15 @@ public class Robot extends TimedRobot {
         return 0;
     }
 
+    boolean sentOne = false;
+
     public void sendGtsamMemes() {
         // Record odometry twists
         var now = RobotController.getFPGATime();
-        odomPub.set(drivetrain.getTwist(), now);
+        
+        if (sentOne) {
+            odomPub.set(drivetrain.getTwist(), now);
+        }
 
         // Record snapshots if the button is pressed
         if (controller.getRawButtonPressed(1)) {
@@ -165,7 +174,8 @@ public class Robot extends TimedRobot {
                                 result.getDetectedCorners()));
             }
 
-            tagPub.set(dets.toArray(new TagDetection[0]));
+            tagPub.set(dets.toArray(new TagDetection[0]), now);
+            sentOne = true;
         }
 
         DataLogManager.getLog().flush();

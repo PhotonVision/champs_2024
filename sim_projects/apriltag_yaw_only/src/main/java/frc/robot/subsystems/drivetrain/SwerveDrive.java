@@ -24,6 +24,7 @@
 
 package frc.robot.subsystems.drivetrain;
 
+import static frc.robot.Constants.ROBOT_PERIOD;
 import static frc.robot.Constants.Swerve.*;
 
 import edu.wpi.first.math.Matrix;
@@ -304,7 +305,7 @@ public class SwerveDrive {
         swerveDriveSim.setSteerInputs(steerInputs);
 
         // Simulate one timestep
-        swerveDriveSim.update(Robot.kDefaultPeriod);
+        swerveDriveSim.update(ROBOT_PERIOD);
 
         // Update module and gyro values with simulated values
         var driveStates = swerveDriveSim.getDriveStates();
