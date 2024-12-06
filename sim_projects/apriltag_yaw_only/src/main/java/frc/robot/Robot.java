@@ -171,11 +171,14 @@ public class Robot extends TimedRobot {
             for (var result : vision.getLatestResult().getTargets()) {
                 dets.add(
                         new TagDetection(result.getFiducialId(),
-                                result.getDetectedCorners()));
+                                result.getDetectedCorners(), drivetrain.getPose()));
             }
 
             tagPub.set(dets.toArray(new TagDetection[0]), now);
             sentOne = true;
+
+            // and reset twist
+            drivetrain.getTwist();
         }
 
         DataLogManager.getLog().flush();

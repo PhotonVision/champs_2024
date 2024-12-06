@@ -54,8 +54,8 @@ for file in os.listdir("logs"):
                 # huge hack
                 if "TagDetection" in startData.name:
                     schemasByTypename[startData.name[startData.name.index("struct:") + len("struct:"):]] = Schema(
-                        "<Ldddddddd",
-                        namedtuple('TagDetection', 'id cx1 cy1 cx2 cy2 cx3 cy3 cx4 cy4')
+                        "<Lddddddddddd",
+                        namedtuple('TagDetection', 'id cx1 cy1 cx2 cy2 cx3 cy3 cx4 cy4 guess_x guess_y guess_theta')
                     )
                 if "Twist3d" in startData.name:
                     schemasByTypename[startData.name[startData.name.index("struct:") + len("struct:"):]] = Schema(
@@ -73,6 +73,9 @@ for file in os.listdir("logs"):
                     inner = []
                     data = entry.getRaw()
                     inner_len = struct.calcsize(schema.unpack)
+
+                    print(f"data {len(data)} inner {inner_len} rem {len(data) % inner_len}")
+
                     for i in range(0, entry.getSize(), inner_len):
                         decoded = schema.tuple._make(struct.unpack(schema.unpack, data[i:i+inner_len]))
                         inner.append(decoded)

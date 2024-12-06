@@ -162,18 +162,21 @@
         }
       },
       "photonvision": {
+        "Microsoft_LifeCam_HD-3000": {
+          "open": true
+        },
         "open": true
       }
     }
   },
   "NetworkTables Info": {
-    "Clients": {
-      "open": true
-    },
     "Connections": {
       "open": true
     },
     "Server": {
+      "Publishers": {
+        "open": true
+      },
       "open": true
     },
     "gtsam-mapper-meme@1": {
@@ -186,8 +189,5 @@
       "open": true
     },
     "visible": true
-  },
-  "NetworkTables View": {
-    "visible": false
   }
 }

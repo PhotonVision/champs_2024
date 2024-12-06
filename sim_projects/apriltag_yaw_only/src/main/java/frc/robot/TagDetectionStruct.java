@@ -6,6 +6,7 @@ import java.util.List;
 import org.opencv.core.Point;
 import org.photonvision.targeting.TargetCorner;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.util.struct.Struct;
 
 public class TagDetectionStruct implements Struct<TagDetection> {
@@ -21,13 +22,13 @@ public class TagDetectionStruct implements Struct<TagDetection> {
 
   @Override
   public int getSize() {
-    return ((8 * 2) * 4 + 4);
+    return ((8 * 2) * 4 + 4 + 8);
   }
 
   @Override
   public String getSchema() {
         return "uint32 id;double cx1;double cy1;double cx2;double cy2;double "
-           + "cx3;double cy3;double cx4;double cy4";
+           + "cx3;double cy3;double cx4;double cy4;Pose2d guess";
   }
 
   @Override
@@ -39,7 +40,8 @@ public class TagDetectionStruct implements Struct<TagDetection> {
             new TargetCorner(bb.getDouble(), bb.getDouble()),
             new TargetCorner(bb.getDouble(), bb.getDouble()),
             new TargetCorner(bb.getDouble(), bb.getDouble())
-        )
+        ),
+        Pose2d.struct.unpack(bb)
     );
   }
 
@@ -50,5 +52,11 @@ public class TagDetectionStruct implements Struct<TagDetection> {
         bb.putDouble(value.corners.get(i).x);
         bb.putDouble(value.corners.get(i).y);
     }
+    Pose2d.struct.pack(bb, value.poseGuess);
+  }
+
+  @Override
+  public Struct<?>[] getNested() {
+      return new Struct[] { Pose2d.struct };
   }
 }
